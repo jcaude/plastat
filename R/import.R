@@ -1,91 +1,92 @@
+library(tibble)
+library(dplyr)
 library(readxl)
 
+THRESHOLD_LogFC = 1
+THRESHOLD_PVALUE = 5e-2
 
-readSC <- function(file = "Data/Shotgun_Plastic.xlsx") {
-  dataset.sc <- read_xlsx(path = file,
-                          sheet = "compar spectra",
-                          col_names = TRUE)
-  colnames(dataset.sc) <- c("ProteinID", "P3","P2","P1","C3","C2","C1")
-  return(dataset.sc)
+#' Read Shotgun Excel Result Files
+#'
+#' @param file name of the excel file
+#' @param sheet name of the excel worksheet
+#'
+#' @return a tibble
+#' @export
+#'
+#' @examples
+#' SC <- readXL()
+readXL <- function(file = "Data/Shotgun_Plastic.xlsx",
+                   sheet = "compar spectra") {
+
+  dataset <- read_xlsx(path = file,sheet = sheet,col_names = TRUE)
+  colnames(dataset) <-
+    c("ProteinID", "P3", "P2", "P1", "C3", "C2", "C1")
+  return(dataset)
 }
 
-# Spectral Count
+my_ttest <- function(x) {
 
-dataset.sc <- read_xlsx(path = "Data/Shotgun_Plastic.xlsx",
-                        sheet = "compar spectra",
-                        col_names = TRUE)
+  # init.
+  n <- length(x)
+  m <- n/2
+  xr <- 1:m
+  yr <- (m+1):n
 
-colnames(dataset.sc) <- c("ProteinID", "P3","P2","P1","C3","C2","C1")
-
-
-dataset.sc$p.value <- apply(dataset.sc[2:7], 1, function(x){
-  if(x[1]==x[2] && x[2]==x[3] && x[3]==x[4] && x[4]==x[5] && x[5]==x[6]){return(1)}
-  else if ((x[1]==x[2] && x[2]==x[3]) && (x[4]==x[5] && x[5]==x[6])) {return(0)} else {
-    t.test(x[1:3], x[4:6])->t.results
+  # t.test
+  if (length(unique(x[xr])) == 1 && length(unique(x[yr])) == 1) {
+    return(1)
+  } else {
+    t.results <- t.test(x[xr], x[yr])
     return(t.results$p.value)
   }
-})
+}
 
-#PAI
+evalTtest <- function(dataset) {
 
-dataset.PAI <- read_xlsx(path = "Data/Shotgun_Plastic.xlsx",
-                        sheet = "compar PAI",
-                        col_names = TRUE)
+  # compute FC
+  dataset <- dataset %>%
+    mutate(P.AVG = (P1+P2+P3)/3) %>%
+    mutate(C.AVG = (C1+C2+C3)/3) %>%
+    mutate(LogFC = log2(P.AVG) - log2(C.AVG))
 
-colnames(dataset.sc) <- c("ProteinID", "P3","P2","P1","C3","C2","C1")
+  # compute PVAL
+  dataset$P.value <- apply(dataset[2:7],1,my_ttest)
 
+  # compute Selection Flag
+  dataset <- dataset %>%
+    mutate(Selected = if_else(P.value < THRESHOLD_PVALUE &
+                                abs(LogFC) > THRESHOLD_LogFC, TRUE,FALSE))
 
-dataset.PAI$p.value <- apply(dataset.PAI[2:7], 1, function(x){
-  if(x[1]==x[2] && x[2]==x[3] && x[3]==x[4] && x[4]==x[5] && x[5]==x[6]){return(1)}
-  else if ((x[1]==x[2] && x[2]==x[3]) && (x[4]==x[5] && x[5]==x[6])) {return(0)} else {
-    t.test(x[1:3], x[4:6])->t.results
-    return(t.results$p.value)
-  }
-})
+  # end.
+  return(dataset)
+}
 
+calcDataset <- function() {
 
-#emPAI
+  # Spectral Count
+  dataset.sc <- readXL(file="Data/Shotgun_Plastic.xlsx",
+                       sheet = "compar spectra")
+  dataset.sc <- evalTtest(dataset = dataset.sc)
 
-dataset.emPAI <- read_xlsx(path = "Data/Shotgun_Plastic.xlsx",
-                        sheet = "compar emPAI",
-                        col_names = TRUE)
+  #PAI
+  dataset.PAI <- readXL(file = "Data/Shotgun_Plastic.xlsx",
+                        sheet = "compar PAI")
+  dataset.PAI <- evalTtest(dataset = dataset.PAI)
 
-colnames(dataset.emPAI) <- c("ProteinID", "P3","P2","P1","C3","C2","C1")
+  #emPAI
+  dataset.emPAI <- readXL(file = "Data/Shotgun_Plastic.xlsx",
+                          sheet = "compar emPAI")
+  dataset.emPAI <- evalTtest(dataset = dataset.emPAI)
 
+  #NSAF
+  dataset.NSAF <- readXL(file = "Data/Shotgun_Plastic.xlsx",
+                         sheet = "compar NSAF")
+  dataset.NSAF <- evalTtest(dataset = dataset.NSAF)
 
-dataset.emPAI$p.value <- apply(dataset.emPAI[2:7], 1, function(x){
-  if(x[1]==x[2] && x[2]==x[3] && x[3]==x[4] && x[4]==x[5] && x[5]==x[6]){return(1)}
-  else if ((x[1]==x[2] && x[2]==x[3]) && (x[4]==x[5] && x[5]==x[6])) {return(0)} else {
-    t.test(x[1:3], x[4:6])->t.results
-    return(t.results$p.value)
-  }
-})
-
-
-
-#NSAF
-
-dataset.NSAF <- read_xlsx(path = "Data/Shotgun_Plastic.xlsx",
-                        sheet = "compar NSAF",
-                        col_names = TRUE)
-
-colnames(dataset.NSAF) <- c("ProteinID", "P3","P2","P1","C3","C2","C1")
-
-
-dataset.NSAF$p.value <- apply(dataset.NSAF[2:7], 1, function(x){
-  if(x[1]==x[2] && x[2]==x[3] && x[3]==x[4] && x[4]==x[5] && x[5]==x[6]){return(1)}
-  else if ((x[1]==x[2] && x[2]==x[3]) && (x[4]==x[5] && x[5]==x[6])) {return(0)} else {
-    t.test(x[1:3], x[4:6])->t.results
-    return(t.results$p.value)
-  }
-})
-
-
-
-
-
-
-
-
-
+  # end
+  return(list(dataset.sc=dataset.sc,
+              dataset.PAI=dataset.PAI,
+              dataset.emPAI=dataset.emPAI,
+              dataset.NSAF=dataset.NSAF))
+}
 
