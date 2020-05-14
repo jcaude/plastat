@@ -90,3 +90,22 @@ calcDataset <- function() {
               dataset.NSAF=dataset.NSAF))
 }
 
+
+dataset.selected <- data.frame(dataset.sc$ProteinID, dataset.sc$Selected, dataset.PAI$Selected, dataset.emPAI$Selected, dataset.NSAF$Selected)
+
+dataset.selected <- dataset.selected %>%
+  rename(SC = dataset.sc.Selected) %>%
+  rename(PAI = dataset.PAI.Selected) %>%
+  rename(emPAI = dataset.emPAI.Selected) %>%
+  rename(NSAF = dataset.NSAF.Selected) %>%
+
+dataset.selected %>%
+  filter(SC == TRUE | PAI == TRUE | emPAI == TRUE | NSAF == TRUE)
+
+dataset.selected %>%
+  filter(SC == TRUE & PAI == TRUE & emPAI == TRUE & NSAF == TRUE)
+
+
+
+
+
