@@ -103,24 +103,18 @@ CmpSelected <- function() {
   perms <- combn(data.names, m = 2)
 
   # then we use apply to iterate over the combination matrix
-  # - MARGIN = 2, because we are iterating by columns
   t <- apply(X = perms, MARGIN = 2, function(p) {
-    # - p[1] == name of the dataset
-    # - data[ p[1] ] === list size=1 of data named p[1]
-    # - data[[ p[1] ]] the second [ ] unlist the results
     #                  (thus pop out the first item of the list)
     ds1 <- data[[p[1]]]  # first dataset
     ds2 <- data[[p[2]]]  # second dataset
 
     # print what we compare
-    name1 <- gsub("dataset\\.","",p[1])  # -- find & replace, \\ because '.' is a special character
+    name1 <- gsub("dataset\\.","",p[1])
     name2 <- gsub("dataset\\.","",p[2])
     cat("Comparison of",name1,"vs",name2,"\n")
     cat("------------------------------------\n")
 
     # print the comparison results
-    # - FALSE == not selected
-    # - TRUE == selected
     print(table(ds1 %>% pull(Selected),
                 ds2 %>% pull(Selected)))
     cat("\n")
